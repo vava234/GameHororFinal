@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1 SURO: JALAN YANG SALAH</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nosifer&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Overlay UI Game -->
+  <div id="container"></div>
+  <div id="vignette"></div>
+  <div id="grain"></div>
+  <div id="fadeOverlay"></div>
+  <div id="redFlash"></div>
+
+  <!-- HUD In-Game -->
+  <div id="hud">
+    <div id="narrative"></div>
+    <div id="crosshair"></div>
+    <div id="interactPrompt">Tekan [E]</div>
+    <div id="subtitle"></div>
+    <div id="stamp"></div>
+  </div>
+
+  <!-- Jumpscare & Ending -->
+  <div id="jumpscare"><img id="jumpscareImg" src="" alt=""></div>
+  <div id="ending">
+    <div id="endingLines"></div>
+    <h3 id="bersambung">BERSAMBUNG...</h3>
+    <button id="restartBtn" class="btn">Ulangi Pendakian</button>
+  </div>
+
+  <!-- MENU UTAMA DENGAN VISUAL BARU -->
+  <div id="menu" class="game-container">
+    
+    <!-- Tombol Audio / Mute -->
+    <button class="audio-btn" title="Toggle Sound" aria-label="Matikan suara" aria-pressed="false">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+      </svg>
+    </button>
+
+    <!-- Subtitle Kecil & Judul Utama -->
+    <h2>Horor · Survival · Mystery</h2>
+    <h1 class="game-title">1 SURO</h1>
+    
+    <p class="lede">
+      Tanggal 1 Suro. Enam sahabat mendaki gunung sakral saat malam. Semua terlihat biasa saja… sampai Erlina dan Sari menghilang di Pos 2. Sekarang giliranmu menyusuri jalan yang sama untuk menemukan mereka.
+    </p>
+
+    <!-- Petunjuk Kontrol -->
+    <div id="controlsBox">
+      <b>WASD</b> — Berjalan &nbsp;|&nbsp; <b>Mouse</b> — Menoleh &nbsp;|&nbsp; <b>E</b> — Berinteraksi &nbsp;|&nbsp; <b>F</b> — Senter<br>
+      <b>Klik layar</b> untuk mengunci kursor &nbsp;|&nbsp; <b>Esc</b> — Lepas kursor
+    </div>
+
+    <!-- Tombol Mulai (Start) -->
+    <button id="startBtn" class="btn btn-start">START</button>
+
+
+    <div id="menuFoot">Gunakan headphone. Matikan lampu. Jangan main sendirian.</div>
+  </div>
+
+  <div id="pauseOverlay" aria-hidden="true">
+    <div id="pauseTitle">PERMAINAN DIJEDA</div>
+    <div>Klik layar untuk melanjutkan</div>
+  </div>
+
+  <!-- Indicator Loading & Error -->
+  <div id="loadingTip"></div>
+  <div id="loadErr">
+    Gagal memuat library 3D (Three.js).<br>Periksa koneksi internet lalu muat ulang halaman.
+  </div>
+
+  <!-- Library Three.js & Script Game -->
+   <img src= "hutan.jpg" alt="hutan" style="display:none;">
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="script copy.js"></script>
+
+</body>
+</html>
