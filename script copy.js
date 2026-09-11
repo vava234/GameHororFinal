@@ -1564,6 +1564,18 @@ function makeIntroArea(){
       roughness:1
     });
 
+  const gateStoneMaterial=
+    new THREE.MeshStandardMaterial({
+      color:0x3f3934,
+      roughness:1
+    });
+
+  const gateStoneDarkMaterial=
+    new THREE.MeshStandardMaterial({
+      color:0x211d1a,
+      roughness:1
+    });
+
   const house=
     new THREE.Group();
 
@@ -1648,6 +1660,57 @@ function makeIntroArea(){
       gate.add(
         post
       );
+
+      for(
+        let i=0;
+        i<3;
+        i++
+      ){
+        const block=
+          new THREE.Mesh(
+            new THREE.BoxGeometry(
+              2.2,
+              1.35,
+              1.8
+            ),
+            gateStoneMaterial
+          );
+
+        block.position.set(
+          x,
+          0.7+i*1.35,
+          8
+        );
+
+        block.rotation.y=
+          i%2===0?
+          0.02:
+          -0.02;
+
+        gate.add(
+          block
+        );
+      }
+
+      const cap=
+        new THREE.Mesh(
+          new THREE.BoxGeometry(
+            2.55,
+            0.35,
+            2.1
+          ),
+          gateStoneDarkMaterial
+        );
+
+      cap.position.set(
+        x,
+        4.25,
+        8
+      );
+
+      gate.add(
+        cap
+      );
     }
   );
 
@@ -1669,6 +1732,68 @@ function makeIntroArea(){
 
   gate.add(
     beam
+  );
+
+  const topRoof=
+    new THREE.Mesh(
+      new THREE.ConeGeometry(
+        5.9,
+        2.2,
+        4
+      ),
+      gateStoneDarkMaterial
+    );
+
+  topRoof.position.set(
+    0,
+    7.05,
+    8
+  );
+
+  topRoof.rotation.y=
+    Math.PI/4;
+
+  gate.add(
+    topRoof
+  );
+
+  [-5.45,5.45].forEach(
+    function(x){
+      const torch=
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(
+            0.11,
+            0.16,
+            0.9,
+            6
+          ),
+          woodMaterial
+        );
+
+      torch.position.set(
+        x,
+        4.9,
+        7.35
+      );
+
+      const fire=
+        new THREE.PointLight(
+          0xff7a32,
+          1.1,
+          8
+        );
+
+      fire.position.set(
+        x,
+        5.55,
+        7.25
+      );
+
+      gate.add(
+        torch,
+        fire
+      );
+    }
   );
 
   const sign=
@@ -1930,6 +2055,78 @@ const graveyardGroup=
 const partyGroup=
   new THREE.Group();
 
+const mysteryClues=[];
+
+function makeMysteryClue(
+  x,
+  z,
+  lines,
+  message,
+  subtitle
+){
+  const clue=
+    new THREE.Group();
+
+  const board=
+    makeMultilineSign(
+      lines,
+      3.8,
+      1.25
+    );
+
+  board.position.y=2.15;
+
+  const post= 
+    new THREE.Mesh(
+      new THREE.BoxGeometry(
+        0.18,
+        2.2,
+        0.18
+      ),
+      new THREE.MeshStandardMaterial({
+        color:0x24160e,
+        roughness:1
+      })
+    );
+
+  post.position.y=1.05;
+
+  const light=
+    new THREE.PointLight(
+      0x8b1717,
+      0.45,
+      4
+    );
+
+  light.position.set(
+    0,
+    2.2,
+    0.2
+  );
+
+  clue.add(
+    board,
+    post,
+    light
+  );
+
+  clue.position.set(
+    x,
+    0,
+    z
+  );
+
+  clue.userData.mysteryClue={
+    message,
+    subtitle,
+    read:false
+  };
+
+  mysteryClues.push(clue);
+
+  return clue;
+}
+
 const introGroup=
   makeIntroArea();
 
@@ -2073,6 +2270,39 @@ forestGroup.add(
       m
     );
   }
+);
+
+forestGroup.add(
+  makeMysteryClue(
+    -4.6,
+    -24*PATH_SCALE,
+    [
+      "JANGAN PERCAYA",
+      "YANG PULANG"
+    ],
+    "Tulisan itu dibuat dengan arang. Di bawahnya ada enam goresan nama, tetapi hanya lima yang dicoret.",
+    'Suara asing: "Yang pulang bukan selalu yang selamat."'
+  ),
+  makeMysteryClue(
+    4.6,
+    -44*PATH_SCALE,
+    [
+      "SARI TIDAK",
+      "HILANG"
+    ],
+    "Di balik papan terselip foto rombongan. Sari berdiri paling belakang, menatap kamera seperti sudah tahu foto itu akan ditemukan.",
+    'Catatan di belakang foto: "Dia ikut naik. Dia tidak pernah turun."'
+  ),
+  makeMysteryClue(
+    -4.6,
+    -84*PATH_SCALE,
+    [
+      "MEREKA TIDAK",
+      "NAIK"
+    ],
+    "Tanah di sekitar papan masih basah, tetapi tidak ada jejak kaki menuju puncak. Hanya ada jejak yang kembali ke hutan.",
+    'Bisikan dari pepohonan: "Kalian datang terlambat."'
+  )
 );
 
 for(
@@ -3566,6 +3796,14 @@ document.addEventListener(
     }
 
     if(
+      e.code==="KeyR"&&
+      !paused&&
+      stage==="eatPrompt"
+    ){
+      refuseFood();
+    }
+
+    if(
       e.code==="KeyF"&&
       !e.repeat
     ){
@@ -4110,6 +4348,7 @@ let stageTimer=0;
 let moveEnabled=false;
 let braceletTaken=false;
 let foodEaten=false;
+let foodRefused=false;
 let villageTwistDone=false;
 let missingIndex=0;
 let caveSequenceStarted=false;
@@ -4204,6 +4443,64 @@ function tryInteract(){
     return;
   }
 
+  for(
+    let i=0;
+    i<mysteryClues.length;
+    i++
+  ){
+    const clue=mysteryClues[i];
+
+    if(
+      !clue.userData.mysteryClue.read&&
+      dist2D(
+        camera.position,
+        clue.position
+      )<4.8
+    ){
+      const data=clue.userData.mysteryClue;
+      data.read=true;
+
+      hidePrompt();
+      showStamp(
+        "PETUNJUK "+
+        (i+1)+
+        " DITEMUKAN"
+      );
+      showNarrative(
+        data.message,
+        6200
+      );
+      showSubtitle(
+        data.subtitle,
+        4200
+      );
+      whisper();
+
+      if(i===1){
+        moveEnabled=false;
+
+        setTimeout(
+          function(){
+            jumpscare(
+              "crowd",
+              780,
+              function(){
+                moveEnabled=true;
+                showSubtitle(
+                  "Saat cahaya kembali, foto itu sudah tidak ada.",
+                  3000
+                );
+              }
+            );
+          },
+          900
+        );
+      }
+
+      return;
+    }
+  }
+
   if(
     stage==="pos4"&&
     dist2D(
@@ -4215,6 +4512,38 @@ function tryInteract(){
     braceletObj.visible=false;
 
     hidePrompt();
+
+function updateMysteryCluePrompt(){
+  if(
+    stage==="trailChallenge"||
+    stage==="pos4"||
+    stage==="eatPrompt"||
+    stage==="ending"
+  ){
+    return;
+  }
+
+  for(
+    let i=0;
+    i<mysteryClues.length;
+    i++
+  ){
+    const clue=mysteryClues[i];
+
+    if(
+      !clue.userData.mysteryClue.read&&
+      dist2D(
+        camera.position,
+        clue.position
+      )<4.8
+    ){
+      showPrompt(
+        "Tekan [E] — periksa petunjuk"
+      );
+      return;
+    }
+  }
+}
 
     showStamp(
       "GELANG DITEMUKAN"
@@ -4250,9 +4579,53 @@ function tryInteract(){
     !foodEaten
   ){
     foodEaten=true;
+    foodRefused=false;
     hidePrompt();
     doEatSequence();
   }
+}
+
+function refuseFood(){
+  if(
+    stage!=="eatPrompt"||
+    foodEaten||
+    foodRefused
+  ){
+    return;
+  }
+
+  foodRefused=true;
+  hidePrompt();
+  moveEnabled=false;
+
+  showNarrative(
+    "Ridwan menolak hidangan itu. Senyum nenek di depannya perlahan menghilang.",
+    4800
+  );
+
+  showSubtitle(
+    'Nenek: "Kalau tidak makan, jangan harap bisa pulang."',
+    3400
+  );
+
+  whisper();
+
+  setTimeout(
+    function(){
+      if(stage!=="eatPrompt"){
+        return;
+      }
+
+      showSubtitle(
+        "Dari belakang terdengar suara Sari memanggil namamu.",
+        3000
+      );
+
+      moveEnabled=true;
+      setStage("afterEat");
+    },
+    3600
+  );
 }
 
 function beginGame(){
@@ -4307,7 +4680,7 @@ function beginGame(){
   );
 
   showNarrative(
-    "POV RIDWAN — Enam sahabat mendaki Gunung Kiwi untuk mencari Erlina dan Sari yang hilang.",
+    "POV RIDWAN — Enam sahabat mendaki Gunung Kiwi. Dua orang hilang sebelum Pos 2, tetapi tidak ada seorang pun yang ingat kapan mereka terakhir bersama.",
     6500
   );
 
@@ -4324,7 +4697,7 @@ function beginGame(){
   setTimeout(
     function(){
       showSubtitle(
-        'Eva: "Terakhir mereka terlihat di Pos 2."',
+        'Eva: "Terakhir mereka terlihat di Pos 2... tapi kenapa foto ini punya enam bayangan?"',
         3000
       );
     },
@@ -4847,7 +5220,7 @@ function updateVillageStage(
       !foodEaten
     ){
       showPrompt(
-        "Tekan [E] — santap hidangan"
+        "[E] Santap hidangan  |  [R] Tolak"
       );
     }
 
@@ -4869,6 +5242,8 @@ function updateVillageStage(
       moveEnabled=true;
 
       showNarrative(
+        foodRefused?
+        "Setelah menolak hidangan, mereka sadar jalan keluar dari kampung itu telah berubah. Lalu seseorang di pendopo menarik perhatian.":
         "Setelah makan, mereka sadar tujuan awal mereka terasa kabur. Lalu seseorang di pendopo menarik perhatian.",
         5000
       );
@@ -5521,19 +5896,25 @@ function showEndingSequence(){
     "Sari adalah ketua sekte yang selama ini menunggu kedatangan mereka.",
     "Pos 4 yang terlihat di depan mereka bukan Pos 4 yang mereka kenal.",
     "Mereka telah masuk ke alam lain, dan nama mereka sudah dipersiapkan sebagai tumbal.",
-    "Jika ingin keluar, mereka harus menyelesaikan semua misi dan mengikuti setiap peraturan."
+    "Jika ingin keluar, mereka harus menyelesaikan semua misi dan mengikuti setiap peraturan.",
+    "Beberapa jam kemudian, seorang pendaki menemukan Ridwan berdiri sendirian di kaki gunung.",
+    "Ridwan akhirnya pulang.",
+    "Tapi yang pulang bukan Ridwan."
   ];
 
   linesBox.innerHTML="";
 
   lines.forEach(
-    function(t){
+    function(t,idx){
       const d=
         document.createElement(
           "div"
         );
 
-      d.className="line";
+      d.className=
+        idx===lines.length-1?
+        "line final-line":
+        "line";
       d.textContent=t;
 
       linesBox.appendChild(
@@ -5560,6 +5941,8 @@ function showEndingSequence(){
 
   setTimeout(
     function(){
+      stinger();
+
       document.getElementById(
         "bersambung"
       ).style.opacity=1;
@@ -5651,6 +6034,10 @@ function animate(){
       updateForestStage(
         stageDt
       );
+
+      if(typeof updateMysteryCluePrompt === "function"){
+        updateMysteryCluePrompt();
+      }
     }
 
     if(
