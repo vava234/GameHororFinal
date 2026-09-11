@@ -1,4 +1,4 @@
-﻿(function(){
+(function(){
 "use strict";
 
 if(typeof THREE==="undefined"){
@@ -273,6 +273,29 @@ function thud(){
 
   o.start(now);
   o.stop(now+0.35);
+}
+
+function warningRumble(){
+  if(audioMuted||!ensureAudio()){
+    return;
+  }
+
+  const now=actx.currentTime;
+  const oscillator=actx.createOscillator();
+  const gain=actx.createGain();
+
+  oscillator.type="sawtooth";
+  oscillator.frequency.setValueAtTime(48,now);
+  oscillator.frequency.exponentialRampToValueAtTime(19,now+1.6);
+
+  gain.gain.setValueAtTime(0.001,now);
+  gain.gain.exponentialRampToValueAtTime(0.32,now+0.08);
+  gain.gain.exponentialRampToValueAtTime(0.001,now+1.7);
+
+  oscillator.connect(gain);
+  gain.connect(actx.destination);
+  oscillator.start(now);
+  oscillator.stop(now+1.75);
 }
 
 function whisper(){
@@ -670,8 +693,10 @@ const renderer=
     alpha:false
   });
 
+const RENDER_SCALE=0.8;
+
 renderer.setPixelRatio(
-  1
+  RENDER_SCALE
 );
 
 renderer.setSize(
@@ -691,7 +716,7 @@ renderer.outputColorSpace=
 renderer.toneMapping=
   THREE.ACESFilmicToneMapping;
 
-renderer.toneMappingExposure=0.95;
+renderer.toneMappingExposure=1.12;
 
 container.appendChild(domEl);
 
@@ -705,7 +730,7 @@ window.addEventListener(
     camera.updateProjectionMatrix();
 
     renderer.setPixelRatio(
-      1
+      RENDER_SCALE
     );
 
     renderer.setSize(
@@ -728,7 +753,7 @@ scene.background=
 const ambientLight=
   new THREE.AmbientLight(
     0x667788,
-    1.15
+    1.4
   );
 
 scene.add(
@@ -738,7 +763,7 @@ scene.add(
 const moonLight=
   new THREE.DirectionalLight(
     0xb4c7d8,
-    0.65
+    0.82
   );
 
 moonLight.position.set(
@@ -756,10 +781,10 @@ scene.add(
 const flashlight=
   new THREE.SpotLight(
     0xfff5d6,
-    2.8,
-    68,
-    Math.PI/2.6,
-    0.5,
+    3.4,
+    100,
+    Math.PI/2.3,
+    0.72,
     1.3
   );
 
@@ -843,7 +868,7 @@ const flashlightGlowTexture=
 const flashlightBeam=
   new THREE.Group();
 
-const FLASHLIGHT_BEAM_STEPS=7;
+const FLASHLIGHT_BEAM_STEPS=4;
 
 for(
   let i=0;
@@ -860,7 +885,7 @@ for(
         map:flashlightGlowTexture,
         color:0xfff2c8,
         transparent:true,
-        opacity:0.24*(1-t*0.8),
+        opacity:0.11*(1-t*0.8),
         blending:THREE.AdditiveBlending,
         depthWrite:false
       })
@@ -868,11 +893,11 @@ for(
 
   const dist=
     1.2+
-    t*15;
+    t*24;
 
   const size=
-    1.8+
-    t*8.4;
+    1.5+
+    t*11;
 
   sprite.scale.set(
     size,
@@ -898,8 +923,8 @@ camera.add(
 const flashlightGlow=
   new THREE.PointLight(
     0xfff0c0,
-    0.75,
-    8,
+    0.42,
+    5,
     1.8
   );
 
@@ -2245,9 +2270,7 @@ forestGroup.add(
 );
 
 [
-  ["POS 1",-18],
   ["POS 2",-38],
-  ["POS 3",-58],
   ["POS 4",-78],
   ["POS 5",-95],
   ["PUNCAK",-116]
@@ -3768,6 +3791,36 @@ graveyardGroup.add(
   erlinaEscort
 );
 
+const graveyardExitClue=
+  makeMultilineSign(
+    [
+      "JANGAN TERSASAR",
+      "IKUTI CAHAYA MERAH ->",
+      "JALAN KELUAR"
+    ],
+    3.8,
+    2.2,
+    {
+      fontSize:44,
+      lineHeight:54
+    }
+  );
+
+graveyardExitClue.position.set(
+  0,
+  2.1,
+  -22
+);
+
+graveyardExitClue.rotation.y=Math.PI;
+graveyardExitClue.userData.graveyardExitClue={
+  read:false
+};
+
+graveyardGroup.add(
+  graveyardExitClue
+);
+
 const EYE_HEIGHT=1.7;
 
 camera.position.set(
@@ -3782,11 +3835,33 @@ let pitch=0;
 const keys={};
 let pointerLocked=false;
 let paused=false;
+let verticalVelocity=0;
+let grounded=true;
+
+const JUMP_SPEED=6.8;
+const GRAVITY=20;
 
 document.addEventListener(
   "keydown",
   function(e){
     keys[e.code]=true;
+
+    if(
+      e.code==="Space"
+    ){
+      e.preventDefault();
+
+      if(
+        !e.repeat&&
+        !paused&&
+        moveEnabled&&
+        grounded
+      ){
+        verticalVelocity=JUMP_SPEED;
+        grounded=false;
+        thud();
+      }
+    }
 
     if(
       e.code==="KeyE"&&
@@ -3929,6 +4004,10 @@ function collidesWithObstacle(
   x,
   z
 ){
+  if(!grounded){
+    return false;
+  }
+
   if(
     forestGroup.visible&&
     Math.abs(x)>10
@@ -3986,14 +4065,27 @@ function updatePlayer(
       0.75*flicker;
   }
 
+  if(!grounded||verticalVelocity>0){
+    verticalVelocity-=GRAVITY*dt;
+    camera.position.y+=verticalVelocity*dt;
+
+    if(
+      camera.position.y<=EYE_HEIGHT
+    ){
+      camera.position.y=EYE_HEIGHT;
+      verticalVelocity=0;
+      grounded=true;
+    }
+  }
+
   if(!moveEnabled){
     return;
   }
 
   const speed=
     keys.ShiftLeft?
-    6.2:
-    3.6;
+    7.6:
+    4.8;
 
   let mx=0;
   let mz=0;
@@ -4087,13 +4179,15 @@ function updatePlayer(
     }
   }
 
-  camera.position.y=
-    EYE_HEIGHT+
-    Math.sin(
-      performance.now()*0.006
-    )*
-    0.02*
-    (mx||mz?1:0.3);
+  if(grounded){
+    camera.position.y=
+      EYE_HEIGHT+
+      Math.sin(
+        performance.now()*0.006
+      )*
+      0.02*
+      (mx||mz?1:0.3);
+  }
 }
 
 const narrativeEl=
@@ -4327,7 +4421,7 @@ function jumpscare(
 
   shakeCamera(
     holdMs||650,
-    0.05
+    0.12
   );
 
   setTimeout(
@@ -4357,12 +4451,83 @@ let trailChallenge=null;
 let trailChallenge1Triggered=false;
 let trailChallenge2Triggered=false;
 let trailChallenge3Triggered=false;
+const posWarningsShown={};
+let posWarningActive=false;
+let posWarningArmed=false;
+let posWarningCallback=null;
+
+function isLookingBehind(){
+  const wrappedYaw=
+    Math.atan2(
+      Math.sin(yaw),
+      Math.cos(yaw)
+    );
+
+  return Math.abs(wrappedYaw)>2.25;
+}
+
+function triggerPosWarning(
+  posLabel,
+  afterWarning
+){
+  if(
+    posWarningsShown[posLabel]||
+    posWarningActive
+  ){
+    return false;
+  }
+
+  posWarningsShown[posLabel]=true;
+  posWarningActive=true;
+  posWarningArmed=true;
+  posWarningCallback=afterWarning||null;
+  showStamp(posLabel);
+  showSubtitle("JANGAN MENENGOK KE BELAKANG",0);
+
+  return true;
+}
+
+function activatePosWarning(){
+  if(!posWarningArmed){
+    return;
+  }
+
+  posWarningArmed=false;
+  moveEnabled=false;
+  hidePrompt();
+  flashRed();
+  warningRumble();
+
+  setTimeout(
+    function(){
+      jumpscare(
+        "nenek",
+        1500,
+        function(){
+          posWarningActive=false;
+          moveEnabled=true;
+          showSubtitle(
+            "Jangan menoleh... teruskan perjalanan.",
+            2600
+          );
+
+          if(posWarningCallback){
+            posWarningCallback();
+          }
+
+          posWarningCallback=null;
+        }
+      );
+    },
+    900
+  );
+}
 
 function startTrailChallenge(
   challenge
 ){
   trailChallenge=challenge;
-  moveEnabled=false;
+  moveEnabled=true;
 
   showStamp(
     challenge.stamp
@@ -4443,6 +4608,27 @@ function tryInteract(){
     return;
   }
 
+  if(
+    graveyardGroup.visible&&
+    dist2D(
+      camera.position,
+      graveyardExitClue.position
+    )<6
+  ){
+    graveyardExitClue.userData.graveyardExitClue.read=true;
+    hidePrompt();
+    showStamp("PETUNJUK KUBURAN");
+    showNarrative(
+      "Tulisan tua itu menunjukkan jalan keluar. Ikuti cahaya merah sampai melewati gerbang kuburan.",
+      5000
+    );
+    showSubtitle(
+      "IKUTI CAHAYA MERAH -> JALAN KELUAR",
+      4200
+    );
+    return;
+  }
+
   for(
     let i=0;
     i<mysteryClues.length;
@@ -4520,6 +4706,19 @@ function updateMysteryCluePrompt(){
     stage==="eatPrompt"||
     stage==="ending"
   ){
+    return;
+  }
+
+  if(
+    graveyardGroup.visible&&
+    dist2D(
+      camera.position,
+      graveyardExitClue.position
+    )<6
+  ){
+    showPrompt(
+      "Tekan [E] — baca petunjuk jalan keluar"
+    );
     return;
   }
 
@@ -4752,6 +4951,34 @@ function updateForestStage(
   const p=
     camera.position;
 
+  if(posWarningArmed){
+    if(isLookingBehind()){
+      activatePosWarning();
+    }
+
+    return;
+  }
+
+  if(posWarningActive){
+    return;
+  }
+
+  if(
+    stage==="toPos2"&&
+    p.z<-18*PATH_SCALE&&
+    triggerPosWarning("POS 1")
+  ){
+    return;
+  }
+
+  if(
+    stage==="toPos4"&&
+    p.z<-58*PATH_SCALE&&
+    triggerPosWarning("POS 3")
+  ){
+    return;
+  }
+
   if(
     stage==="toPos2"
   ){
@@ -4765,7 +4992,7 @@ function updateForestStage(
         stamp:"TANTANGAN 1",
         narrative:"Jalur tertutup batang pohon tumbang. Dari balik pepohonan terdengar langkah yang mengikuti ritme langkahmu.",
         subtitle:"Jangan menoleh. Singkirkan penghalangnya dan terus berjalan.",
-        prompt:"singkirkan pohon tumbang",
+        prompt:"loncati pohon tumbang dengan Space",
         target:{
           x:-3.4,
           z:-30*PATH_SCALE
@@ -4794,28 +5021,13 @@ function updateForestStage(
         3200
       );
 
-      setTimeout(
+      triggerPosWarning(
+        "POS 2",
         function(){
-          flashRed();
-          whisper();
-
-          showSubtitle(
-            "Erlina... Sari...?",
-            2400
+          setStage(
+            "toPos4"
           );
-
-          setTimeout(
-            function(){
-              moveEnabled=true;
-
-              setStage(
-                "toPos4"
-              );
-            },
-            1700
-          );
-        },
-        1800
+        }
       );
     }
   }
@@ -4860,8 +5072,13 @@ function updateForestStage(
         4200
       );
 
-      showPrompt(
-        "Tekan [E] — periksa toilet"
+      triggerPosWarning(
+        "POS 4",
+        function(){
+          showPrompt(
+            "Tekan [E] — periksa toilet"
+          );
+        }
       );
     }
   }
@@ -4927,6 +5144,8 @@ function updateForestStage(
         "Kiri gelap dan dipenuhi pepohonan. Kanan diterangi lampu kuning.",
         4300
       );
+
+      triggerPosWarning("POS 5");
     }
   }
 
@@ -5993,7 +6212,7 @@ const clock=
 
 let stageUpdateAccumulator=0;
 let lastRenderTime=0;
-const RENDER_INTERVAL=1000/45;
+const RENDER_INTERVAL=1000/40;
 
 function animate(){
   requestAnimationFrame(
@@ -6054,6 +6273,10 @@ function animate(){
       updateGraveyardStage(
         stageDt
       );
+
+      if(typeof updateMysteryCluePrompt === "function"){
+        updateMysteryCluePrompt();
+      }
     }
 
     if(
